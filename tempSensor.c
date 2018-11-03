@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ifttt.h"
+#include <wiringPi.h>
 
 int main(int argc, char *argv[])
 {

@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-lWarn -pedantic
 
 tempSensor:	tempSensor.o libmyifttt.a
-	$(CC) tempSensor.o -L. -lwiringPi -lm -lmyifttt  -o tempSensor
+	$(CC) tempSensor.o -L. -lwiringPi -lmyifttt -lcurl -o tempSensor
 
 libmyifttt.a:	ifttt.o
 	ar -rcs libmyifttt.a ifttt.o

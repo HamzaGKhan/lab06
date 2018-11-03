@@ -1,35 +1,107 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ifttt.h"
-#include <wiringPi.h>
+#include <unistd.h>
+#include <curl/curl.h>
+#include <fcntl.h>
 
 int main(int argc, char *argv[])
 {
- FILE *fd;
+ int fd;
  int n;
  char buf[101]; /* reads the file value from cat w1_slave */
  char config[1] = {0xF3};
- write(file, config, 1); 
- sleep(1);
- if((fd = fopen("/sys/bus/w1/devices/28-01131bd38d54/w1_slave", "r")) == (FILE *)NULL) 
-  {
-  perror("open of /sys/bus/w1/devices/28-01131bd38d54/w1_slave  failed");
-  (void) exit(1);
+ char data[5]=  {0};
+ char cMinTemp[5];
+ char cMaxTemp[5];
+ char cCurrent[5];
+ float initialTemp;	
+ float cTemp;
+ float minTemp = 300.0F;
+ float maxTemp = 0.0F;
+ int i,j;
+ int counter = 0;
+  while(1){
+     fd = open("/sys/bus/w1/devices/28-01131bd38d54/w1_slave",O_RDONLY);	
+      if(fd == -1)
+        {
+	perror("open of w1_slave failed");
+	(void) exit(1);
+  }
+  counter++;
+  while(1){
+      n = read(fd,buf,256);
+      if(n==0)
+       {
+	   break;
+       }
+      if(n==-1){
+      perror("read fails");
+       close(fd);
+	exit(1);	
+       }
+  }
+ 
+  for(i=0;i<=sizeof(buf);i++){
+	if(buf[i] == 't'){
+		for(j=0;j<sizeof(buf);j++){
+		    data[j] = buf[i+2+j];
+		 }	
+	}
+	
+  }
+ 
+ cTemp = (float) atoi(data)/1000;
+ printf("%d ",counter);
+ if(cTemp < minTemp){
+        minTemp = cTemp;
+        for(i=0;i<5;i++){
+                cMinTemp[i] = data[i];
+        }
+ }
+ if(cTemp > maxTemp){   
+        maxTemp = cTemp;
+             for(i=0;i<5;i++){
+                        cMaxTemp[i] = data[i];
+                }
  }
 
-   char data[5]={0}; /*stores the temperature in a 5 bit word */
+ if(counter == 1){
+	initialTemp = cTemp;
+        
+         sprintf(cCurrent,"%f", cTemp);
+         sprintf(cMinTemp,"%f", minTemp);
+         sprintf(cMaxTemp,"%f", maxTemp);
 
-   n = fread(buf, 1, 100, fd);
-   if(n == 0) 
-	{
-	 perror("read fails!");
- 	exit(1);
- 	}
-  float cTemp = (data[0] * 256 + data[1]);
-  cTemp = (((cTemp * 175.72) / 65536) - 46.85);
-  float fTemp = cTemp * 1.8 + 32;
- 
- printf("Temperature in Celsius    : %.2f\n", cTemp);
- printf("Temperature in Fahrenheit : %.2f\n", fTemp);
+	ifttt("https://maker.ifttt.com/trigger/temp_change/with/key/nAtR0mlz6FSWp52xT1BGw",cMaxTemp,cMinTemp,cCurrent);
+ }
 
+ if((cTemp - initialTemp) >=1){
+		printf("changed");
+                
+                sprintf(cCurrent," %f", cTemp);
+                sprintf(cMinTemp," %f", minTemp);
+                sprintf(cMaxTemp," %f", maxTemp);
+
+		ifttt("https://maker.ifttt.com/trigger/temp_change/with/key/nAtR0mlz6FSWp52xT1BGw",cMaxTemp,cMinTemp,cCurrent);
+ }
+ /*
+ if(cTemp < minTemp){
+	minTemp = cTemp;
+	for(i=0;i<5;i++){
+		cMinTemp[i] = data[i];
+	}
+ }
+ if(cTemp > maxTemp){
+	maxTemp = cTemp;
+	     for(i=0;i<5;i++){
+			cMaxTemp[i] = data[i];
+		}
+ }
+ */
+ printf("Current: %.3f\n", cTemp);
+ printf("Min: %.3f\n", minTemp);
+ printf("Max: %.3f\n", maxTemp);
+  close(fd); 
+ }
 }

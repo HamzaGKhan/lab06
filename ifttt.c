@@ -38,3 +38,4 @@ int ifttt(char*where, char *v1, char *v2, char *v3)
   curl_global_cleanup();
   return 0;
 }
+
